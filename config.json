@@ -1,0 +1,1232 @@
+{
+    "workspace": {
+        "units": "mm",
+        "reverseWidgets": false,
+        "safeRetractHeight": 30,
+        "toolChangeOption": "Code",
+        "toolChangeHooks": {
+            "preHook": "",
+            "postHook": ";Bitsetter measure tool better\n\n; Wait until the planner queue is empty\n%wait\n\n%global.state.SAFE_HEIGHT = -10          ; clear everything height(negative number, distance below Z limit)\n; Set BitSetter probe location\n%global.state.BITSETTER_X_LOCATION = -5  ; machine coordinates\n%global.state.BITSETTER_Y_LOCATION = -3  ; machine coordinates\n%global.state.BITSETTER_Z_LOCATION = -20 ; machine coordinates --> lower this (more negative) to start the probing closer to wasteboard\n\n; Location for tool changes\n%global.state.TOOLCHANGE_X = -125\n\n%global.state.BITSETTER_PROBE_DISTANCE = 100\n%global.state.BITSETTER_PROBE_FEEDRATE = 300 ; mm/min\n\n; Wait until the planner queue is empty\n%wait\n\n; Keep a backup of current work position\n%X0=posx, Y0=posy, Z0=posz\n\n; Save modal state\n%WCS = modal.wcs\n%PLANE = modal.plane\n%UNITS = modal.units\n%DISTANCE = modal.distance\n%FEEDRATE = modal.feedrate\n%SPINDLE = modal.spindle\n%COOLANT = modal.coolant\n\nG21 ; metric\nM5  ; Stop spindle\nG90 ; Absolute positioning\n\n; Get to a safe height and park for tool change\nG53 G0 Z[global.state.SAFE_HEIGHT]\nG53 X[global.state.TOOLCHANGE_X] Y[global.state.BITSETTER_Y_LOCATION]\n\n; Pause for manual tool change & probing\n%wait\nM0 ; Please insert a tool\n\n; Go to BitSetter\nG53 X[global.state.BITSETTER_X_LOCATION] Y[global.state.BITSETTER_Y_LOCATION]\nG53 Z[global.state.BITSETTER_Z_LOCATION]\n\n%probe_start_z = posz\n\nG91 ; Relative positioning\n\nG38.2 z-[global.state.BITSETTER_PROBE_DISTANCE] F[global.state.BITSETTER_PROBE_FEEDRATE]; fast probe (so it doesn't take forever)\nG0 z2\nG38.2 z-5 F40 ; \"dial-it-in\" probes\nG4 P.25\nG38.4 z10 F20\nG4 P.25\nG38.2 z-2 F10\nG4 P.25\nG38.4 z10 F5\nG4 P.25\n\nG90 ; Abosolute positioning\n%wait\n\n; Get the Z position at the end of measuring tool length\n%probe_end_z = posz\n%probe_actual_distance = probe_start_z - probe_end_z\n%is_initial_tool = ! (global.state.PROBE_ACTUAL_DISTANCE > 0)\n\n; Update Z offset for new tool\n; note: do this in individual steps otherwise it sometimes treats some variables as strings (wtf??)\n;     resulting in new_z=-31.0423.3225252\n\n%delta_z = is_initial_tool ? 0 : probe_actual_distance*1.0 - global.state.PROBE_ACTUAL_DISTANCE*1.0\n%new_z = posz*1.0 + delta_z*1.0\n%new_z  =  Math.round(new_z * 1000) / 1000\n(old=[global.state.PROBE_ACTUAL_DISTANCE] new=[probe_actual_distance] new_z=[new_z])\n\nG10 L20 Z[new_z]\n\n%global.state.PROBE_ACTUAL_DISTANCE = probe_actual_distance\n\n%wait\n\nG91 ; Relative positioning\nG0 Z5\nG90 ; Absolute positioning\nG53 Z[global.state.SAFE_HEIGHT] ; Move in machine coordinates to safe height\n%wait\n; Go to work zero at a SAFE_HEIGHT for Z\nG0 X0 Y0\n\n; Restore modal state\n[PLANE] [UNITS] [DISTANCE] [FEEDRATE] [SPINDLE] [COOLANT]"
+        },
+        "container": {
+            "primary": {
+                "show": true,
+                "widgets": [
+                    "location",
+                    "axes",
+                    "secondary"
+                ]
+            },
+            "secondary": {
+                "widgets": []
+            }
+        },
+        "machineProfile": {
+            "id": 19,
+            "company": "",
+            "name": "Nomad",
+            "type": "",
+            "version": "MK1",
+            "mm": {
+                "depth": 250,
+                "height": 95,
+                "width": 250
+            },
+            "in": {
+                "depth": 9.84,
+                "height": 3.74,
+                "width": 9.84
+            },
+            "endstops": true,
+            "spindle": true,
+            "coolant": false,
+            "laser": false,
+            "eepromSettings": {
+                "$0": "10",
+                "$1": "100",
+                "$2": "1",
+                "$3": "5",
+                "$4": "1",
+                "$5": "0",
+                "$6": "0",
+                "$10": "1",
+                "$11": "0.010",
+                "$12": "0.002",
+                "$13": "0",
+                "$20": "0",
+                "$21": "0",
+                "$22": "0",
+                "$23": "0",
+                "$24": "25.000",
+                "$25": "500.000",
+                "$26": "250",
+                "$27": "1.000",
+                "$30": "30000",
+                "$31": "0",
+                "$32": "0",
+                "$100": "200.000",
+                "$101": "200.000",
+                "$102": "200.000",
+                "$110": "4000.000",
+                "$111": "4000.000",
+                "$112": "3000.000",
+                "$120": "750.000",
+                "$121": "750.000",
+                "$122": "500.000",
+                "$130": "812.000",
+                "$131": "304.000",
+                "$132": "105.000"
+            },
+            "limits": {
+                "xmin": 0,
+                "ymin": 0,
+                "zmin": 0,
+                "xmax": 250,
+                "ymax": 250,
+                "zmax": 95
+            }
+        },
+        "probeProfile": {
+            "xyThickness": {
+                "mm": 0,
+                "in": 0
+            },
+            "zThickness": {
+                "mm": 0,
+                "in": 0
+            },
+            "plateWidth": {
+                "mm": 0,
+                "in": 0
+            },
+            "plateLength": {
+                "mm": 50,
+                "in": 1.969
+            },
+            "functions": {
+                "x": true,
+                "y": true,
+                "z": true
+            },
+            "touchplateType": "Standard Block"
+        },
+        "tools": [
+            {
+                "metricDiameter": 6.35,
+                "imperialDiameter": 0.25,
+                "type": "end mill"
+            },
+            {
+                "metricDiameter": 3.175,
+                "imperialDiameter": 0.125,
+                "type": "end mill"
+            }
+        ],
+        "recentFiles": [],
+        "gamepad": {
+            "deadZone": 0.5,
+            "precision": 3,
+            "profiles": []
+        },
+        "terminal": {
+            "inputHistory": [
+                "~"
+            ]
+        },
+        "tool": {
+            "metricDiameter": 0,
+            "imperialDiameter": 0,
+            "type": "end mill"
+        }
+    },
+    "widgets": {
+        "axes": {
+            "minimized": false,
+            "axes": [
+                "x",
+                "y",
+                "z"
+            ],
+            "jog": {
+                "xyStep": 5,
+                "zStep": 2,
+                "feedrate": 3000,
+                "keypad": false,
+                "rapid": {
+                    "mm": {
+                        "xyStep": 20,
+                        "zStep": 10,
+                        "feedrate": 5000
+                    },
+                    "in": {
+                        "xyStep": 1,
+                        "zStep": 0.5,
+                        "feedrate": 196.85
+                    }
+                },
+                "normal": {
+                    "mm": {
+                        "xyStep": 5,
+                        "zStep": 2,
+                        "feedrate": 3000
+                    },
+                    "in": {
+                        "xyStep": 0.2,
+                        "zStep": 0.04,
+                        "feedrate": 118.11
+                    }
+                },
+                "precise": {
+                    "mm": {
+                        "xyStep": 0.5,
+                        "zStep": 0.1,
+                        "feedrate": 1000
+                    },
+                    "in": {
+                        "xyStep": 0.02,
+                        "zStep": 0.004,
+                        "feedrate": 39.37
+                    }
+                },
+                "imperial": {
+                    "step": 16,
+                    "distances": []
+                },
+                "metric": {
+                    "step": 12,
+                    "distances": []
+                }
+            },
+            "mdi": {
+                "disabled": false
+            },
+            "shuttle": {
+                "feedrateMin": 500,
+                "feedrateMax": 2000,
+                "hertz": 10,
+                "overshoot": 1
+            }
+        },
+        "connection": {
+            "minimized": false,
+            "controller": {
+                "type": ""
+            },
+            "port": "/dev/tty.usbmodem2101",
+            "baudrate": 115200,
+            "connection": {
+                "type": "serial",
+                "serial": {
+                    "rtscts": false
+                }
+            },
+            "autoReconnect": false
+        },
+        "console": {
+            "minimized": false
+        },
+        "job_status": {
+            "minimized": false,
+            "feedrateMin": 500,
+            "feedrateMax": 2000,
+            "spindleSpeedMin": 0,
+            "spindleSpeedMax": 1000,
+            "speed": 1000,
+            "lastFile": "Facing6mm.nc",
+            "lastFileSize": 17700,
+            "lastFileRunLength": 14953
+        },
+        "grbl": {
+            "minimized": false,
+            "panel": {
+                "queueReports": {
+                    "expanded": true
+                },
+                "statusReports": {
+                    "expanded": true
+                },
+                "modalGroups": {
+                    "expanded": true
+                }
+            }
+        },
+        "location": {
+            "minimized": false,
+            "axes": [
+                "x",
+                "y",
+                "z"
+            ],
+            "jog": {
+                "keypad": true,
+                "imperial": {
+                    "step": 16,
+                    "distances": []
+                },
+                "metric": {
+                    "step": 12,
+                    "distances": []
+                },
+                "speeds": {
+                    "xyStep": 5,
+                    "zStep": 0.5,
+                    "feedrate": 5000
+                }
+            },
+            "mdi": {
+                "disabled": false
+            },
+            "shuttle": {
+                "feedrateMin": 500,
+                "feedrateMax": 2000,
+                "hertz": 10,
+                "overshoot": 1
+            }
+        },
+        "macro": {
+            "minimized": false
+        },
+        "probe": {
+            "minimized": false,
+            "probeCommand": "G38.2",
+            "connectivityTest": true,
+            "useTLO": false,
+            "probeDepth": 10,
+            "probeFeedrate": {
+                "mm": 75,
+                "in": 2.95
+            },
+            "probeFastFeedrate": {
+                "mm": 150,
+                "in": 5.9
+            },
+            "retractionDistance": {
+                "mm": 4,
+                "in": 0.15
+            },
+            "touchPlateHeight": 10,
+            "probeType": "Auto"
+        },
+        "spindle": {
+            "minimized": false,
+            "mode": "spindle",
+            "speed": 22640,
+            "spindleMax": 24000,
+            "spindleMin": 8000,
+            "laser": {
+                "power": 100,
+                "duration": 1,
+                "xOffset": 0,
+                "yOffset": 0,
+                "minPower": 0,
+                "maxPower": 255
+            }
+        },
+        "surfacing": {
+            "bitDiameter": 22,
+            "stepover": 40,
+            "feedrate": 2500,
+            "length": 609.6,
+            "width": 1219.2,
+            "skimDepth": 1,
+            "maxDepth": 1,
+            "spindleRPM": 17000,
+            "type": "SPIRAL_MOVEMENT",
+            "startPosition": "START_POSITION_BACK_LEFT",
+            "spindle": "M3",
+            "cutDirectionFlipped": false
+        },
+        "visualizer": {
+            "minimized": false,
+            "liteMode": false,
+            "disabled": false,
+            "disabledLite": false,
+            "minimizeRenders": false,
+            "projection": "orthographic",
+            "cameraMode": "pan",
+            "theme": "Dark",
+            "gcode": {
+                "displayName": true
+            },
+            "objects": {
+                "limits": {
+                    "visible": true
+                },
+                "coordinateSystem": {
+                    "visible": true
+                },
+                "gridLineNumbers": {
+                    "visible": true
+                },
+                "cuttingTool": {
+                    "visible": true,
+                    "visibleLite": false
+                },
+                "cuttingToolAnimation": {
+                    "visible": true,
+                    "visibleLite": false
+                },
+                "cutPath": {
+                    "visible": true,
+                    "visibleLite": true
+                }
+            },
+            "showWarning": false,
+            "showLineWarnings": false
+        },
+        "secondary": {
+            "minimized": false
+        }
+    },
+    "commandKeys": [
+        {
+            "id": 0,
+            "title": "Load File",
+            "keys": "shift+l",
+            "cmd": "LOAD_FILE",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Carving"
+        },
+        {
+            "id": 1,
+            "title": "Unload File",
+            "keys": "shift+k",
+            "cmd": "UNLOAD_FILE",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Carving"
+        },
+        {
+            "id": 2,
+            "title": "Test Run",
+            "keys": "#",
+            "cmd": "TEST_RUN",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Carving"
+        },
+        {
+            "id": 3,
+            "title": "Start Job",
+            "keys": "~",
+            "cmd": "START_JOB",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Carving"
+        },
+        {
+            "id": 4,
+            "title": "Pause Job",
+            "keys": "!",
+            "cmd": "PAUSE_JOB",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Carving"
+        },
+        {
+            "id": 5,
+            "title": "Stop Job",
+            "keys": "@",
+            "cmd": "STOP_JOB",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Carving"
+        },
+        {
+            "id": 6,
+            "title": "Feed +",
+            "keys": "",
+            "cmd": "FEEDRATE_OVERRIDE",
+            "payload": {
+                "amount": 1
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 7,
+            "title": "Feed ++",
+            "keys": "",
+            "cmd": "FEEDRATE_OVERRIDE",
+            "payload": {
+                "amount": 10
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 8,
+            "title": "Feed -",
+            "keys": "",
+            "cmd": "FEEDRATE_OVERRIDE",
+            "payload": {
+                "amount": -1
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 9,
+            "title": "Feed --",
+            "keys": "",
+            "cmd": "FEEDRATE_OVERRIDE",
+            "payload": {
+                "amount": -10
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 10,
+            "title": "Feed Reset",
+            "keys": "",
+            "cmd": "FEEDRATE_OVERRIDE",
+            "payload": {
+                "amount": 0
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 11,
+            "title": "Spindle/Laser +",
+            "keys": "",
+            "cmd": "SPINDLE_OVERRIDE",
+            "payload": {
+                "amount": 1
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 12,
+            "title": "Spindle/Laser ++",
+            "keys": "",
+            "cmd": "SPINDLE_OVERRIDE",
+            "payload": {
+                "amount": 10
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 13,
+            "title": "Spindle/Laser -",
+            "keys": "",
+            "cmd": "SPINDLE_OVERRIDE",
+            "payload": {
+                "amount": -1
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 14,
+            "title": "Spindle/Laser --",
+            "keys": "",
+            "cmd": "SPINDLE_OVERRIDE",
+            "payload": {
+                "amount": -10
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 15,
+            "title": "Spindle/Laser Reset",
+            "keys": "",
+            "cmd": "SPINDLE_OVERRIDE",
+            "payload": {
+                "amount": 0
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Overrides"
+        },
+        {
+            "id": 16,
+            "title": "3D / Isometric",
+            "keys": "",
+            "cmd": "VISUALIZER_VIEW",
+            "payload": {
+                "type": "isometirc"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Visualizer"
+        },
+        {
+            "id": 17,
+            "title": "Top",
+            "keys": "",
+            "cmd": "VISUALIZER_VIEW",
+            "payload": {
+                "type": "top"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Visualizer"
+        },
+        {
+            "id": 18,
+            "title": "Front",
+            "keys": "",
+            "cmd": "VISUALIZER_VIEW",
+            "payload": {
+                "type": "front"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Visualizer"
+        },
+        {
+            "id": 19,
+            "title": "Right",
+            "keys": "",
+            "cmd": "VISUALIZER_VIEW",
+            "payload": {
+                "type": "right"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Visualizer"
+        },
+        {
+            "id": 20,
+            "title": "Left",
+            "keys": "",
+            "cmd": "VISUALIZER_VIEW",
+            "payload": {
+                "type": "left"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Visualizer"
+        },
+        {
+            "id": 21,
+            "title": "Reset View",
+            "keys": "shift+n",
+            "cmd": "VISUALIZER_VIEW",
+            "payload": {
+                "type": "default"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Visualizer"
+        },
+        {
+            "id": 22,
+            "title": "Lightweight Mode",
+            "keys": "shift+m",
+            "cmd": "LIGHTWEIGHT_MODE",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Visualizer"
+        },
+        {
+            "id": 23,
+            "title": "Zero X Axis",
+            "keys": "shift+w",
+            "cmd": "ZERO_AXIS",
+            "preventDefault": true,
+            "payload": {
+                "axis": "x"
+            },
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 24,
+            "title": "Zero Y Axis",
+            "keys": "shift+e",
+            "cmd": "ZERO_AXIS",
+            "preventDefault": true,
+            "payload": {
+                "axis": "y"
+            },
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 25,
+            "title": "Zero Z Axis",
+            "keys": "shift+r",
+            "cmd": "ZERO_AXIS",
+            "preventDefault": true,
+            "payload": {
+                "axis": "z"
+            },
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 26,
+            "title": "Zero All",
+            "keys": "shift+q",
+            "cmd": "ZERO_AXIS",
+            "payload": {
+                "axis": "all"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 27,
+            "title": "Go to X Zero",
+            "keys": "shift+s",
+            "cmd": "GO_TO_AXIS_ZERO",
+            "preventDefault": true,
+            "payload": {
+                "axisList": [
+                    "x"
+                ]
+            },
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 28,
+            "title": "Go to Y Zero",
+            "keys": "shift+d",
+            "cmd": "GO_TO_AXIS_ZERO",
+            "preventDefault": true,
+            "payload": {
+                "axisList": [
+                    "y"
+                ]
+            },
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 29,
+            "title": "Go to Z Zero",
+            "keys": "shift+f",
+            "cmd": "GO_TO_AXIS_ZERO",
+            "preventDefault": true,
+            "payload": {
+                "axisList": [
+                    "z"
+                ]
+            },
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 30,
+            "title": "Go to XY Zero",
+            "keys": "shift+a",
+            "cmd": "GO_TO_AXIS_ZERO",
+            "payload": {
+                "axisList": [
+                    "x",
+                    "y"
+                ]
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 31,
+            "title": "Homing",
+            "keys": "ctrl+alt+command+h",
+            "cmd": "CONTROLLER_COMMAND",
+            "payload": {
+                "command": "homing"
+            },
+            "preventDefault": true,
+            "isActive": true,
+            "category": "Location"
+        },
+        {
+            "id": 32,
+            "title": "Jog: X+",
+            "keys": "shift+right",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "x": 1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 33,
+            "title": "Jog: X-",
+            "keys": "shift+left",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "x": -1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 34,
+            "title": "Jog: Y+",
+            "keys": "shift+up",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "y": 1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 35,
+            "title": "Jog: Y-",
+            "keys": "shift+down",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "y": -1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 36,
+            "title": "Jog: Z+",
+            "keys": "shift+pageup",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "z": 1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 37,
+            "title": "Jog: Z-",
+            "keys": "shift+pagedown",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "z": -1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 38,
+            "title": "Jog: X+ Y-",
+            "keys": "",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "x": 1,
+                    "y": -1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 39,
+            "title": "Jog: X- Y+",
+            "keys": "",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "x": -1,
+                    "y": 1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 40,
+            "title": "Jog: X+ Y+",
+            "keys": "",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "x": 1,
+                    "y": 1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 41,
+            "title": "Jog: X- Y-",
+            "keys": "",
+            "cmd": "JOG",
+            "payload": {
+                "axis": {
+                    "x": -1,
+                    "y": -1
+                }
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 42,
+            "title": "Stop Jog",
+            "keys": "",
+            "cmd": "STOP_JOG",
+            "payload": {
+                "force": true
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 43,
+            "title": "Increase Jog Speed",
+            "keys": "=",
+            "cmd": "JOG_SPEED",
+            "payload": {
+                "speed": "increase"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 44,
+            "title": "Decrease Jog Speed",
+            "keys": "-",
+            "cmd": "JOG_SPEED",
+            "payload": {
+                "speed": "decrease"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 45,
+            "title": "Select Rapid Jog Preset",
+            "keys": "shift+v",
+            "cmd": "SET_JOG_PRESET",
+            "payload": {
+                "key": "rapid"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 46,
+            "title": "Select Normal Jog Preset",
+            "keys": "shift+c",
+            "cmd": "SET_JOG_PRESET",
+            "payload": {
+                "key": "normal"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 47,
+            "title": "Select Precise Jog Preset",
+            "keys": "shift+x",
+            "cmd": "SET_JOG_PRESET",
+            "payload": {
+                "key": "precise"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 48,
+            "title": "Cycle Through Jog Presets",
+            "keys": "shift+z",
+            "cmd": "CYCLE_JOG_PRESETS",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Jogging"
+        },
+        {
+            "id": 49,
+            "title": "Confirm Probe",
+            "keys": "",
+            "cmd": "CONFIRM_PROBE",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Probing"
+        },
+        {
+            "id": 50,
+            "title": "Start Probing",
+            "keys": "",
+            "cmd": "START_PROBE",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Probing"
+        },
+        {
+            "id": 51,
+            "title": "Toggle Mode",
+            "keys": "",
+            "cmd": "TOGGLE_SPINDLE_LASER_MODE",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Spindle/Laser"
+        },
+        {
+            "id": 52,
+            "title": "CW / Laser On",
+            "keys": "",
+            "cmd": "CW_LASER_ON",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Spindle/Laser"
+        },
+        {
+            "id": 53,
+            "title": "CCW / Laser Test",
+            "keys": "",
+            "cmd": "CCW_LASER_TEST",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Spindle/Laser"
+        },
+        {
+            "id": 54,
+            "title": "Stop / Laser Off",
+            "keys": "",
+            "cmd": "STOP_LASER_OFF",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Spindle/Laser"
+        },
+        {
+            "id": 71,
+            "title": "Mist Coolant",
+            "keys": "",
+            "cmd": "MIST_COOLANT",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Coolant"
+        },
+        {
+            "id": 72,
+            "title": "Flood Coolant",
+            "keys": "",
+            "cmd": "FLOOD_COOLANT",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Coolant"
+        },
+        {
+            "id": 73,
+            "title": "Stop Coolant",
+            "keys": "",
+            "cmd": "STOP_COOLANT",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Coolant"
+        },
+        {
+            "id": 55,
+            "title": "Cut",
+            "keys": "ctrl+x",
+            "cmd": "CUT",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 56,
+            "title": "Copy",
+            "keys": "ctrl+c",
+            "cmd": "COPY",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 57,
+            "title": "Paste",
+            "keys": "ctrl+v",
+            "cmd": "PASTE",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 58,
+            "title": "Undo",
+            "keys": "ctrl+z",
+            "cmd": "UNDO",
+            "preventDefault": true,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 59,
+            "title": "Close Dialog",
+            "keys": "esc",
+            "cmd": "CLOSE_DIALOG",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 60,
+            "title": "Toggle Tab Widgets",
+            "keys": "tab",
+            "cmd": "TOGGLE_TAB_WIDGETS",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 61,
+            "title": "Unlock",
+            "keys": "$",
+            "cmd": "CONTROLLER_COMMAND",
+            "payload": {
+                "command": "unlock"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 62,
+            "title": "Soft Reset",
+            "keys": "%",
+            "cmd": "CONTROLLER_COMMAND",
+            "payload": {
+                "command": "reset"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 63,
+            "title": "Toggle Shortcuts",
+            "keys": "^",
+            "cmd": "TOGGLE_SHORTCUTS",
+            "preventDefault": false,
+            "isActive": true,
+            "category": "General"
+        },
+        {
+            "id": 64,
+            "title": "Connect",
+            "keys": "f1",
+            "cmd": "OPEN_TOOLBAR",
+            "payload": {
+                "shouldConnect": true
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Toolbar"
+        },
+        {
+            "id": 65,
+            "title": "Surfacing",
+            "keys": "f2",
+            "cmd": "OPEN_TOOLBAR",
+            "payload": {
+                "toolbar": "widgets/macro:MODAL_SURFACING"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Toolbar"
+        },
+        {
+            "id": 66,
+            "title": "Heightmap",
+            "keys": "f3",
+            "cmd": "OPEN_TOOLBAR",
+            "payload": {
+                "toolbar": null
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Toolbar"
+        },
+        {
+            "id": 67,
+            "title": "Calibrate",
+            "keys": "f4",
+            "cmd": "OPEN_TOOLBAR",
+            "payload": {
+                "toolbar": "widgets/macro:MODAL_CALIBRATE"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Toolbar"
+        },
+        {
+            "id": 68,
+            "title": "Firmware",
+            "keys": "f5",
+            "cmd": "OPEN_TOOLBAR",
+            "payload": {
+                "toolbar": "widgets/macro:MODAL_FIRMWARE"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Toolbar"
+        },
+        {
+            "id": 69,
+            "title": "Help",
+            "keys": "f6",
+            "cmd": "OPEN_TOOLBAR",
+            "payload": {
+                "toolbar": "widgets/macro:MODAL_HELP"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Toolbar"
+        },
+        {
+            "id": 70,
+            "title": "Settings",
+            "keys": "f7",
+            "cmd": "OPEN_TOOLBAR",
+            "payload": {
+                "toolbar": "widgets/macro:MODAL_PREFERENCES"
+            },
+            "preventDefault": false,
+            "isActive": true,
+            "category": "Toolbar"
+        }
+    ]
+}
