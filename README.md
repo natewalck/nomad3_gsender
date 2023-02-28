@@ -1,16 +1,15 @@
-Nomad 3 gSender configs
-###
+# Nomad 3 gSender configs
 
 These configurations are for use with the [Carbide 3D Nomad 3](https://shop.carbide3d.com/collections/cnc-machines/products/nomad-3) using the [Sienci gSender g-code sender](https://github.com/Sienci-Labs/gsender)
 
 
 Hardware
----
+--------
 These configs cover using the BitZero v2 which comes with the Nomad 3.
 
 To use the 3D Probe, you will need additional hardware:
-[CNC 3D Edge Finder](https://www.amazon.com/dp/B0B46Y6GG7)
-[Mini XLR to XLR](https://www.amazon.com/dp/B09NN3MX9V)
+* [CNC 3D Edge Finder](https://www.amazon.com/dp/B0B46Y6GG7)
+* [Mini XLR to XLR](https://www.amazon.com/dp/B09NN3MX9V)
 
 To get the probe hooked up correctly, you will need to use a multimeter to identify the order of the wires in the BitZero port (Mini-XLR).
 
@@ -22,7 +21,7 @@ The pinout of the bit zero on the pro is (+V, gnd, signal) which is what is need
 When the 3D Probe is hooked up correctly, there will be a green light on by default which turns red when the probe has been triggered. Test this *before* actually trying to use it on stock.
 
 Quick Start
----
+-----------
 The quickest way to get started is as follows:
 * Import config.json
 * Import macros.json
